@@ -1,0 +1,24 @@
+digraph {
+    node [shape="box"];
+
+    加电复位
+
+    检查GPIO刷机跳线 [shape="diamond"];
+    检查Flash模式标志位 [shape="diamond"];
+    复制自身进入SRAM
+    进入刷机模式
+    正常引导
+
+
+    加电复位 -> 检查GPIO刷机跳线
+
+    检查GPIO刷机跳线:e -> 复制自身进入SRAM [label="Y"];
+
+    检查GPIO刷机跳线:s -> 检查Flash模式标志位 [label="N"];
+
+    检查Flash模式标志位:e -> 复制自身进入SRAM [label="Y"];
+
+    复制自身进入SRAM -> 进入刷机模式
+
+    检查Flash模式标志位:s -> 正常引导 [label="N"];
+}
