@@ -19,8 +19,6 @@ break rust_begin_unwind
 # *try* to stop at the user entry point (it might be gone due to inlining)
 break main
 
-monitor arm semihosting enable
-
 # # send captured ITM to the file itm.fifo
 # # (the microcontroller SWO pin must be connected to the programmer SWO pin)
 # # 8000000 must match the core clock frequency
@@ -35,6 +33,8 @@ monitor arm semihosting enable
 # monitor itm port 0 on
 
 monitor reset
+
+monitor arm semihosting enable
 
 load
 

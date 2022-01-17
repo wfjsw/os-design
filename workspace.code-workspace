@@ -5,6 +5,9 @@
 		},
 		{
 			"path": "try\\app"
+		},
+		{
+			"path": "docs"
 		}
 	],
 	"settings": {}

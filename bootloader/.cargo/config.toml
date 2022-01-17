@@ -27,6 +27,8 @@ rustflags = [
   # "-C", "linker=arm-none-eabi-gcc",
   # "-C", "link-arg=-Wl,-Tlink.x",
   # "-C", "link-arg=-nostartfiles",
+
+  "-C", "linker-plugin-lto",
 ]
 
 [build]
