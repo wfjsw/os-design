@@ -5,20 +5,25 @@ digraph {
 
     检查GPIO刷机跳线 [shape="diamond"];
     检查Flash模式标志位 [shape="diamond"];
-    复制自身进入SRAM
-    进入刷机模式
-    正常引导
+    刷机子程序装入SRAM
+    引导进入刷机子程序
+    引导尝试 [shape="diamond"];
 
 
-    加电复位 -> 检查GPIO刷机跳线
+    加电复位 -> 检查GPIO刷机跳线:n
 
-    检查GPIO刷机跳线:e -> 复制自身进入SRAM [label="Y"];
+    检查GPIO刷机跳线:w -> 刷机子程序装入SRAM [label="Y"];
 
     检查GPIO刷机跳线:s -> 检查Flash模式标志位 [label="N"];
 
-    检查Flash模式标志位:e -> 复制自身进入SRAM [label="Y"];
+    检查Flash模式标志位:w -> 刷机子程序装入SRAM [label="Y"];
 
-    复制自身进入SRAM -> 进入刷机模式
+    刷机子程序装入SRAM -> 引导进入刷机子程序
 
-    检查Flash模式标志位:s -> 正常引导 [label="N"];
+    检查Flash模式标志位:s -> 引导尝试:n [label="N"];
+
+    引导尝试 -> 结束 [label="正常"]
+
+    引导尝试:e -> 写入标志位:w [label="异常"]
+    写入标志位:e -> 加电复位:e
 }

@@ -8,7 +8,13 @@
 		},
 		{
 			"path": "docs"
+		},
+		{
+			"path": "os"
 		}
 	],
-	"settings": {}
+	"settings": {
+		"rust-analyzer.cargo.target": "thumbv7m-none-eabi",
+		"rust-analyzer.experimental.procAttrMacros": false,
+	},
 }

@@ -14,7 +14,7 @@
             "cwd": "${workspaceRoot}",
             "preLaunchTask": "Cargo Build (debug)",
             "runToEntryPoint": "main",
-            "executable": "./target/thumbv7m-none-eabi/debug/bootloader",
+            "executable": "./target/thumbv7m-none-eabi/debug/app",
             /* Run `cargo build --example hello` and uncomment this line to run semi-hosting example */
             // "executable": "./target/thumbv7m-none-eabi/debug/examples/hello",
             "cpu": "cortex-m3",

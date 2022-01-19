@@ -1,5 +1,5 @@
 [package]
-name = "bootloader"
+name = "chocos"
 version = "0.1.0"
 edition = "2021"
 
@@ -12,18 +12,30 @@ cortex-m-semihosting = "0.3.3"
 panic-halt = "0.2.0"
 panic-semihosting = { version = "0.5.6", features = ["exit"] }
 embedded-hal = "0.2.6"
-usbd-hid = "0.5.2"
+lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
+
+
+# Uncomment for the panic example.
+# panic-itm = "0.4.1"
 
 # Uncomment for the allocator example.
 # alloc-cortex-m = "0.4.0"
+
+# Uncomment for the device example.
+# Update `memory.x`, set target to `thumbv7em-none-eabihf` in `.cargo/config`,
+# and then use `cargo build --examples device` to build it.
 
 [dependencies.stm32f1xx-hal]
 version = "0.8.0"
 features = ["rt", "stm32f103", "high"]
 
+[dependencies.stm32f1]
+version = "0.14.0"
+features = ["stm32f103"]
+
 # this lets you use `cargo fix`!
 [[bin]]
-name = "bootloader"
+name = "chocos"
 test = false
 bench = false
 
