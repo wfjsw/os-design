@@ -1,0 +1,8 @@
+rust calling convention:
+
+ - R7: base stack pointer
+ - LR: return address
+
+Call init:
+ - PUSH {R7, LR}
+ - MOV R7, SP

@@ -16,5 +16,8 @@
 	"settings": {
 		"rust-analyzer.cargo.target": "thumbv7m-none-eabi",
 		"rust-analyzer.experimental.procAttrMacros": false,
+		"cortex-debug.variableUseNaturalFormat": false,
+		"cortex-debug.registerUseNaturalFormat": false,
+		
 	},
 }

@@ -10,17 +10,17 @@ digraph {
     引导尝试 [shape="diamond"];
 
 
-    加电复位 -> 检查GPIO刷机跳线:n
-
-    检查GPIO刷机跳线:w -> 刷机子程序装入SRAM [label="Y"];
-
-    检查GPIO刷机跳线:s -> 检查Flash模式标志位 [label="N"];
+    加电复位 -> 检查Flash模式标志位:n
 
     检查Flash模式标志位:w -> 刷机子程序装入SRAM [label="Y"];
 
+    检查Flash模式标志位:s -> 检查GPIO刷机跳线 [label="N"];
+
+    检查GPIO刷机跳线:w -> 刷机子程序装入SRAM [label="Y"];
+
     刷机子程序装入SRAM -> 引导进入刷机子程序
 
-    检查Flash模式标志位:s -> 引导尝试:n [label="N"];
+    检查GPIO刷机跳线:s -> 引导尝试:n [label="N"];
 
     引导尝试 -> 结束 [label="正常"]
 
