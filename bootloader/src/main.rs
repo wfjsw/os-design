@@ -105,7 +105,15 @@ static mut USB_HID: Option<HIDClass<'static, UsbBus<Peripheral>>> = None;
 static mut USB_DEVICE: Option<UsbDevice<'static, UsbBus<Peripheral>>> = None;
 
 // static usbBus: RefCell<Option<UsbBusAllocator<UsbBus<Peripheral>>>> = RefCell::new(None);
-fn go_bootloader(_flash: stm32f1xx_hal::flash::Parts, usb: stm32f1xx_hal::pac::USB, crh: &mut stm32f1xx_hal::gpio::Cr<stm32f1xx_hal::gpio::CRH, 'A'>, crl: &mut stm32f1xx_hal::gpio::Cr<stm32f1xx_hal::gpio::CRL, 'D'>, pa11: stm32f1xx_hal::gpio::gpioa::PA11<Input<Floating>>, pa12: stm32f1xx_hal::gpio::gpioa::PA12<Input<Floating>>, pd6: stm32f1xx_hal::gpio::gpiod::PD6<Input<Floating>>) -> ! {
+fn go_bootloader(
+    _flash: stm32f1xx_hal::flash::Parts, 
+    usb: stm32f1xx_hal::pac::USB, 
+    crh: &mut stm32f1xx_hal::gpio::Cr<stm32f1xx_hal::gpio::CRH, 'A'>, 
+    crl: &mut stm32f1xx_hal::gpio::Cr<stm32f1xx_hal::gpio::CRL, 'D'>, 
+    pa11: stm32f1xx_hal::gpio::gpioa::PA11<Input<Floating>>, 
+    pa12: stm32f1xx_hal::gpio::gpioa::PA12<Input<Floating>>, 
+    pd6: stm32f1xx_hal::gpio::gpiod::PD6<Input<Floating>>
+) -> ! {
     #[cfg(debug_assertions)]
     let _ = hprintln!("Init flasher");
 

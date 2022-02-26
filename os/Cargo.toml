@@ -12,8 +12,8 @@ cortex-m-semihosting = "0.3.3"
 panic-halt = "0.2.0"
 panic-semihosting = { version = "0.5.6", features = ["exit"] }
 embedded-hal = "0.2.6"
-lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
-
+usb-device = "0.2.8"
+usbd-hid = "0.5.2"
 
 # Uncomment for the panic example.
 # panic-itm = "0.4.1"

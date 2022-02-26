@@ -13,6 +13,8 @@ mod task_scheduler;
 mod syscall_provider;
 mod usb_hid;
 
+mod utils;
+
 #[cfg(not(debug_assertions))]
 use panic_halt as _;
 
@@ -21,12 +23,10 @@ use cortex_m_semihosting::hprintln;
 #[cfg(debug_assertions)]
 use panic_semihosting as _; // logs messages to the host stderr; requires a debugger
 
-use lazy_static::lazy_static;
-use core::{cell::RefCell, arch::asm};
-use cortex_m::{interrupt, peripheral::syst::SystClkSource};
+use core::arch::asm;
+use cortex_m::peripheral::syst::SystClkSource;
 use cortex_m_rt::{entry, exception};
 use stm32f1xx_hal::{device};
-use cortex_m::interrupt::Mutex;
 use task_scheduler::TaskScheduler;
 
 static mut PERIPHERALS: Option<device::Peripherals> = None;
@@ -46,7 +46,7 @@ fn main() -> ! {
 
     unsafe { 
         let scb = &mut CORE_PERIPHERALS.as_mut().unwrap().SCB;
-        reset_scb(scb);
+        reset_vtor(scb);
     }
 
     #[cfg(debug_assertions)]
@@ -61,8 +61,9 @@ fn main() -> ! {
         syst.enable_counter();
         syst.enable_interrupt();
     }
-
+    
     let task_scheduler = TaskScheduler::new();
+
     unsafe {
         TASK_SCHEDULER = Some(task_scheduler);
 
@@ -70,18 +71,27 @@ fn main() -> ! {
         TASK_SCHEDULER.as_mut().unwrap().init();
     }
 
-    loop { }
+    loop {
+        cortex_m::asm::wfi(); // wait for interrupt
+    }
 }
 
 // This fix VTOR to correct value so interrupts work flawlessly.
 // not needed if not boot by SRAM
-unsafe fn reset_scb(scb: &mut cortex_m::peripheral::SCB) {
+unsafe fn reset_vtor(scb: &mut cortex_m::peripheral::SCB) {
     scb.vtor.write(0x2000_0000);
 }
 
 #[exception]
-fn SysTick() {
-    // ctx switch
-    // this flags a PendSV interrupt
-    stm32f1xx_hal::pac::SCB::set_pendsv();
+unsafe fn SysTick() {
+    let task_scheduler_opt = TASK_SCHEDULER.as_ref();
+    if task_scheduler_opt.is_some() {
+        let task_scheduler = task_scheduler_opt.unwrap();
+        if task_scheduler.is_activated {
+            // ctx switch
+            // this flags a PendSV interrupt
+            stm32f1xx_hal::pac::SCB::set_pendsv();
+        }
+    }
+
 }
