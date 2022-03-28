@@ -1,7 +1,6 @@
-use crate::PERIPHERALS;
 
 use cortex_m::asm;
-use stm32f1xx_hal::{pac::interrupt, gpio::{Input, Cr, CRL, CRH, Floating, PushPull, Output, GpioExt, gpioa, gpiod}, usb::{Peripheral, UsbBus}};
+use stm32f1xx_hal::{pac::interrupt, gpio::{Input, Cr, CRL, CRH, Floating, gpioa, gpiod}, usb::{Peripheral, UsbBus}};
 use usb_device::{class_prelude::{UsbBusAllocator}, device::{UsbDeviceBuilder, UsbVidPid, UsbDevice}, UsbError};
 use usbd_hid::descriptor::SerializedDescriptor;
 use usbd_hid::{hid_class::HIDClass, descriptor::KeyboardReport};

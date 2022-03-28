@@ -1,11 +1,14 @@
 #![no_std]
+#![no_main]
 
 #[macro_use]
 mod stdlib;
 
 use core::{arch::asm, panic::PanicInfo};
 
-fn main() {
+entry!(main);
+
+fn main() -> ! {
     
 
     loop {

@@ -23,38 +23,40 @@ use cortex_m_semihosting::hprintln;
 #[cfg(debug_assertions)]
 use panic_semihosting as _; // logs messages to the host stderr; requires a debugger
 
-use core::arch::asm;
 use cortex_m::peripheral::syst::SystClkSource;
 use cortex_m_rt::{entry, exception};
-use stm32f1xx_hal::{device};
+use stm32f1xx_hal::{device, gpio::GpioExt};
 use task_scheduler::TaskScheduler;
 
-static mut PERIPHERALS: Option<device::Peripherals> = None;
-static mut CORE_PERIPHERALS: Option<device::CorePeripherals> = None;
+static mut MPU: Option<cortex_m::peripheral::MPU> = None;
 static mut TASK_SCHEDULER: Option<TaskScheduler> = None;
 
 #[entry]
 fn main() -> ! {
 
     let p = device::Peripherals::take().unwrap();
-    let cp = device::CorePeripherals::take().unwrap();
+    let mut cp = device::CorePeripherals::take().unwrap();
 
     unsafe {
-        PERIPHERALS = Some(p);
-        CORE_PERIPHERALS = Some(cp);
+        MPU = Some(cp.MPU);
     }
 
     unsafe { 
-        let scb = &mut CORE_PERIPHERALS.as_mut().unwrap().SCB;
+        let scb = &mut cp.SCB;
         reset_vtor(scb);
     }
 
     #[cfg(debug_assertions)]
     let _ = hprintln!("OS init");
 
+    // setup usb
+    let mut gpioa = p.GPIOA.split();
+    let mut gpiod = p.GPIOD.split();
+    usb_hid::init(p.USB, gpiod.pd6, &mut gpiod.crl, gpioa.pa11, gpioa.pa12, &mut gpioa.crh);
+
     // setup timer
     unsafe {
-        let syst = &mut CORE_PERIPHERALS.as_mut().unwrap().SYST;
+        let syst = &mut cp.SYST;
         syst.set_clock_source(SystClkSource::Core);
         syst.set_reload(720_000); // 10ms
         syst.clear_current();

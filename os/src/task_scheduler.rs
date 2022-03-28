@@ -5,7 +5,6 @@ use cortex_m::{interrupt, peripheral::SCB, register::control};
 use crate::{
     structs::OptionalStruct,
     utils::{mpu::MPU, npriv::Npriv},
-    CORE_PERIPHERALS,
 };
 
 #[derive(Copy, Clone, PartialEq)]
@@ -21,9 +20,10 @@ pub enum ProcessState {
 #[repr(C)]
 pub struct ProcessControlBlock {
     // Process ID
-    pub pid: u16,
-    pub ppid: u16,
+    pub pid: usize,
+    pub ppid: usize,
     pub stack_base: u32,
+    pub entry_point: u32,
     pub priority: u8,
     pub state: ProcessState,
     pub running_state: SavedState,
@@ -36,6 +36,7 @@ pub const MAX_PCB: usize = 8;
 pub struct TaskScheduler {
     pub is_activated: bool,
     pub current_process: usize,
+    pub pending_process: usize,
     pub pcbs: [OptionalStruct<ProcessControlBlock>; MAX_PCB],
 }
 
@@ -63,12 +64,14 @@ impl TaskScheduler {
         TaskScheduler {
             is_activated: false,
             current_process: 0,
+            pending_process: 0,
             pcbs: [OptionalStruct {
                 is_some: false,
                 value: ProcessControlBlock {
                     pid: 0,
                     ppid: 0,
                     stack_base: 0,
+                    entry_point: 0,
                     priority: 0,
                     state: ProcessState::Initialize,
                     running_state: SavedState {
@@ -111,7 +114,7 @@ impl TaskScheduler {
         // MPU::arm();
     }
 
-    pub fn create(&mut self, ppid: u16) -> Option<&mut ProcessControlBlock> {
+    pub fn create(&mut self, ppid: usize, entry_point: u32) -> Option<&ProcessControlBlock> {
         let mut i = 1;
         while i < 12 {
             if self.pcbs[i].is_some {
@@ -119,10 +122,12 @@ impl TaskScheduler {
             } else {
                 self.pcbs[i].is_some = true;
                 self.pcbs[i].value.ppid = ppid;
-                self.pcbs[i].value.pid = i as u16;
+                self.pcbs[i].value.pid = i;
                 self.pcbs[i].value.state = ProcessState::Initialize;
                 self.pcbs[i].value.stack_base = get_base_stack_pointer_from_pid(i);
-                return Some(&mut self.pcbs[i].value);
+                self.pcbs[i].value.entry_point = entry_point;
+
+                return Some(&self.pcbs[i].value);
             }
         }
 
@@ -136,6 +141,7 @@ impl TaskScheduler {
                 self.current_process = i;
                 break;
             }
+            
             i += 1;
 
             if i > 11 {
@@ -151,6 +157,10 @@ impl TaskScheduler {
         &mut self.pcbs[i].value
     }
 
+    pub fn this_process_status(&self) -> ProcessState{
+        self.pcbs[self.current_process].value.state
+    }
+
     pub fn switch(&mut self, old_saved_state: SavedState) -> &ProcessControlBlock {
         // disarm MPU first
         // MPU::disarm();
@@ -160,8 +170,18 @@ impl TaskScheduler {
         this_process.state = ProcessState::Ready;
         this_process.running_state = old_saved_state;
 
-        let next_process = self.next_ready();
-        next_process.state = ProcessState::Running;
+        let next_process = match self.pending_process {
+            0 => {
+                let process = self.next_ready();
+                process.state = ProcessState::Running;
+                process
+            },
+            _ => {
+                let pending_process = self.pending_process;
+                self.pending_process = 0;
+                &mut self.pcbs[pending_process].value
+            },
+        };
 
         // setup MPU
         // TBD
@@ -170,6 +190,18 @@ impl TaskScheduler {
         // MPU::arm();
 
         next_process
+    }
+
+    pub fn set_pending_process(&mut self, pid: usize) {
+        if pid > 0 && pid < MAX_PCB {
+            self.pending_process = pid;
+        }
+    }
+
+
+    pub fn exit(&mut self, pid: u16) {
+        self.pcbs[pid as usize].value.state = ProcessState::Terminated;
+        self.pcbs[pid as usize].is_some = false;
     }
 }
 

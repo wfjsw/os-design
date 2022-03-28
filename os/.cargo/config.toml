@@ -29,6 +29,7 @@ rustflags = [
   # "-C", "link-arg=-nostartfiles",
 
   "-C", "linker-plugin-lto",
+  "-C", "link-arg=-error-limit=0"
 ]
 
 [build]

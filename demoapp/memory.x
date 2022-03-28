@@ -10,8 +10,8 @@ MEMORY
   RAM : ORIGIN = 0x20000000, LENGTH = 64K
   */
 
-  FLASH : ORIGIN = 0x20000000, LENGTH = 53248
-  RAM : ORIGIN = 0x2000D000, LENGTH = 12288
+  FLASH : ORIGIN = 0x00000000, LENGTH = 45056
+  RAM : ORIGIN = 0x20000000, LENGTH = 20480
 
 }
 
@@ -28,7 +28,7 @@ _stack_start = 0x2000F500;
 /* This is required only on microcontrollers that store some configuration right
    after the vector table */
 /* _stext = ORIGIN(FLASH) + 0x400; */
-_stext = ORIGIN(FLASH) + 0x200;
+_stext = ORIGIN(FLASH);
 
 /* Example of putting non-initialized variables into custom RAM locations. */
 /* This assumes you have defined a region RAM2 above, and in the Rust
@@ -45,10 +45,10 @@ _stext = ORIGIN(FLASH) + 0x200;
 
 
 /* MAGIC VALUE USED TO RESET SP/PC TO VALID ADDRESS WHEN BOOT ON SRAM */
-SECTIONS {
+/* SECTIONS {
    .magic 0x200001e0 : AT(0x200001e0) {
       LONG(0xD000F8DF);
       LONG(0x2000F500);
       LONG(0xF1E8F85F);
    } > FLASH
-} INSERT AFTER .vector_table
+} INSERT AFTER .vector_table */
