@@ -37,7 +37,7 @@
             "configFiles": [
                 // "interface/cmsis-dap.cfg",
                 // "target/stm32f1x.cfg",
-                "openocd.cfg",
+                "./openocd.cfg",
             ],
             "svdFile": "${workspaceRoot}/.vscode/STM32F103.svd",
             "preLaunchCommands": [
@@ -51,7 +51,7 @@
                 "decoders": [
                     { "type": "console", "label": "ITM", "port": 0 }
                 ]
-            }
+            },
             
         }
     ]

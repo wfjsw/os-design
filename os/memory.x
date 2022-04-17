@@ -5,13 +5,15 @@ MEMORY
   /* These values correspond to the LM3S6965, one of the few devices QEMU can emulate */
   /* FLASH : ORIGIN = 0x00000000, LENGTH = 256K */
 
-  /*
-  FLASH : ORIGIN = 0x08000000, LENGTH = 512K
-  RAM : ORIGIN = 0x20000000, LENGTH = 64K
-  */
+  
+  FLASH : ORIGIN = 0x08010000, LENGTH = 448K
+  RAM : ORIGIN = 0x20001000, LENGTH = 60K
+  
 
+  /*
   FLASH : ORIGIN = 0x20000000, LENGTH = 53248
   RAM : ORIGIN = 0x2000D000, LENGTH = 12288
+  */
 
 }
 
@@ -20,7 +22,7 @@ MEMORY
 /* You may want to use this variable to locate the call stack and static
    variables in different memory regions. Below is shown the default value */
 /* _stack_start = ORIGIN(RAM) + LENGTH(RAM); */
-_stack_start = 0x2000F500;
+_stack_start = 0x2000E500;
 
 /* You can use this symbol to customize the location of the .text section */
 /* If omitted the .text section will be placed right after the .vector_table
@@ -45,6 +47,7 @@ _stext = ORIGIN(FLASH) + 0x200;
 
 
 /* MAGIC VALUE USED TO RESET SP/PC TO VALID ADDRESS WHEN BOOT ON SRAM */
+/*
 SECTIONS {
    .magic 0x200001e0 : AT(0x200001e0) {
       LONG(0xD000F8DF);
@@ -52,3 +55,4 @@ SECTIONS {
       LONG(0xF1E8F85F);
    } > FLASH
 } INSERT AFTER .vector_table
+*/

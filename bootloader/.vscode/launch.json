@@ -42,7 +42,7 @@
             "svdFile": "${workspaceRoot}/.vscode/STM32F103.svd",
             "preLaunchCommands": [
                 "monitor arm semihosting enable",
-            ]
+            ],
             // "swoConfig": {
             //     "enabled": false,
             //     "cpuFrequency": 72000000,

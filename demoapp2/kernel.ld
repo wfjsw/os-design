@@ -11,14 +11,15 @@ SECTIONS {
         * be run first. We allow room for the ATAGs and stack and conform to 
         * the bootloader's expectation by putting this code at 0x8000.
 	*/
-	.init 0x0 : {
+	/*
+	.init : {
 		*(.init)
 	}
-	
+	*/
 	/* 
 	* Next we put the rest of the code.
 	*/
-	.text : {
+	.text 0x08030000 : {
 		*(.text)
 	}
 

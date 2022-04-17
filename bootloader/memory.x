@@ -5,13 +5,15 @@ MEMORY
   /* These values correspond to the LM3S6965, one of the few devices QEMU can emulate */
   /* FLASH : ORIGIN = 0x00000000, LENGTH = 256K */
 
-  /*
+  
   FLASH : ORIGIN = 0x08000000, LENGTH = 512K
   RAM : ORIGIN = 0x20000000, LENGTH = 64K
-  */
+  
 
+  /*
   FLASH : ORIGIN = 0x20000000, LENGTH = 56K
   RAM : ORIGIN = 0x2000E000, LENGTH = 4K
+  */
 
 }
 
@@ -28,7 +30,7 @@ _stack_start = 0x2000F500;
 /* This is required only on microcontrollers that store some configuration right
    after the vector table */
 /* _stext = ORIGIN(FLASH) + 0x400; */
-_stext = ORIGIN(FLASH) + 0x200;
+/*_stext = ORIGIN(FLASH) + 0x200;*/
 
 /* Example of putting non-initialized variables into custom RAM locations. */
 /* This assumes you have defined a region RAM2 above, and in the Rust
@@ -45,6 +47,7 @@ _stext = ORIGIN(FLASH) + 0x200;
 
 
 /* MAGIC VALUE USED TO RESET SP/PC TO VALID ADDRESS WHEN BOOT ON SRAM */
+/*
 SECTIONS {
    .magic 0x200001e0 : AT(0x200001e0) {
       LONG(0xD000F8DF);
@@ -52,3 +55,4 @@ SECTIONS {
       LONG(0xF1E8F85F);
    } > FLASH
 } INSERT AFTER .vector_table
+*/

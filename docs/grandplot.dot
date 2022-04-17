@@ -1,0 +1,101 @@
+digraph {
+
+    subgraph cluster_bootloader {
+        label = "Bootloader";
+
+        引导入口点
+
+        初始化外设
+
+        "输出 Init 信号"
+
+        读存储标记
+
+        等待
+
+        检查按钮
+
+        "覆写 VTOR, MSP 与 PC"
+
+
+    }
+
+    subgraph cluster_kernel {
+        label = "Kernel";
+
+        内核入口点
+
+        "初始化 USB"
+
+        "初始化 SysTick"
+
+        "等待中断"
+
+        subgraph cluster_interrupt_handler {
+            label = "Interrupt Handler";
+
+            SysTick
+
+            SVCall
+
+            PendSV
+
+            "SVC-1"
+            "SVC-3"
+            "SVC-4"
+            "SVC-5"
+            "SVC-6"
+        }
+        
+        subgraph cluster_task_scheduler {
+            label = "Task Scheduler";
+
+            任务管理器初始化
+
+            创建进程
+            切换进程
+            回收进程
+        }
+
+    }
+
+    
+    Reset
+
+    Reset 
+        -> 引导入口点 
+        -> 初始化外设 
+        -> "输出 Init 信号" 
+        -> 读存储标记 
+        -> 等待 
+        -> 检查按钮 
+        -> "覆写 VTOR, MSP 与 PC"
+        -> 内核入口点
+        -> "初始化 USB"
+        -> "初始化 SysTick"
+        -> 任务管理器初始化
+        -> 创建进程
+        -> 等待中断
+        -> 等待中断
+
+    任务管理器初始化
+        -> PendSV
+        -> 切换进程
+
+    SysTick -> PendSV
+
+    "SVC-1" -> PendSV
+
+    SVCall -> { "SVC-1"
+        "SVC-3"
+        "SVC-4"
+        "SVC-5"
+        "SVC-6" 
+    }
+
+    "SVC-5" -> 回收进程
+    "SVC-6" -> 创建进程
+
+
+
+}

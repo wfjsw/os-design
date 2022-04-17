@@ -11,19 +11,19 @@ use usb_device::{class_prelude::{UsbBusAllocator}, device::{UsbDeviceBuilder, Us
 use usbd_hid::descriptor::SerializedDescriptor;
 use usbd_hid::{hid_class::HIDClass, descriptor::KeyboardReport};
 
-#[cfg(not(debug_assertions))]
+// #[cfg(not(debug_assertions))]
 use core::panic::PanicInfo;
 
-#[cfg(debug_assertions)]
-use cortex_m_semihosting::hprintln;
-#[cfg(debug_assertions)]
-use panic_semihosting as _; // logs messages to the host stderr; requires a debugger
+// #[cfg(debug_assertions)]
+// use cortex_m_semihosting::hprintln;
+// #[cfg(debug_assertions)]
+// use panic_semihosting as _; // logs messages to the host stderr; requires a debugger
 
 use cortex_m::{asm, delay::Delay};
 use cortex_m_rt::entry;
 use stm32f1xx_hal::{device, prelude::*};
 
-pub const OS_ADDR: u32 = 0x0800_0400;
+pub const OS_ADDR: u32 = 0x0801_0000;
 
 #[entry]
 fn main() -> ! {
@@ -47,10 +47,10 @@ fn main() -> ! {
     let mut gpiod = p.GPIOD.split();
 
     // debug in memory: set scb to 0x20000000 so interrupt handler would work properly
-    unsafe { scb.vtor.write(0x2000_0000); }
+    // unsafe { scb.vtor.write(0x2000_0000); }
 
-    #[cfg(debug_assertions)]
-    let _ = hprintln!("Bootloader init");
+    // #[cfg(debug_assertions)]
+    // let _ = hprintln!("Bootloader init");
 
     // check SRAM flash flag
     unsafe {
@@ -60,8 +60,8 @@ fn main() -> ! {
         if flag == [0xAD, 0x10, 0x07, 0xB0, 0x00, 0x00, 0x00, 0xE2] {
             // clear the flag
             core::ptr::write_volatile(0x2000_FFF0 as *mut [u8; 8], [0x00; 8]);
-            #[cfg(debug_assertions)]
-            let _ = hprintln!("SRAM flag set, jumping to isp");
+            // #[cfg(debug_assertions)]
+            // let _ = hprintln!("SRAM flag set, jumping to isp");
             go_bootloader(flash, p.USB, &mut gpioa.crh, &mut gpiod.crl, gpioa.pa11, gpioa.pa12, gpiod.pd6);
         }
     }
@@ -76,23 +76,23 @@ fn main() -> ! {
 
     let btn = gpioa.pa0.into_pull_up_input(&mut gpioa.crl);
     if btn.is_high() {
-        #[cfg(debug_assertions)]
-        let _ = hprintln!("Button pressed, jumping to isp");
+        // #[cfg(debug_assertions)]
+        // let _ = hprintln!("Button pressed, jumping to isp");
         go_bootloader(flash, p.USB, &mut gpioa.crh, &mut gpiod.crl, gpioa.pa11, gpioa.pa12, gpiod.pd6);
     }
 
 
     // boot usercode
-    #[cfg(debug_assertions)]
-    let _ = hprintln!("Jumping to user code");
+    // #[cfg(debug_assertions)]
+    // let _ = hprintln!("Jumping to user code");
 
     boot(&mut scb, OS_ADDR as *const u32);
 }
 
 // Jump to the user application code
 fn boot(scb: &mut cortex_m::peripheral::SCB, vtable: *const u32) -> ! {
-    #[cfg(debug_assertions)]
-    let _ = hprintln!("Booting");
+    // #[cfg(debug_assertions)]
+    // let _ = hprintln!("Booting");
 
     unsafe {
         scb.vtor.write(vtable as u32);
@@ -114,13 +114,17 @@ fn go_bootloader(
     pa12: stm32f1xx_hal::gpio::gpioa::PA12<Input<Floating>>, 
     pd6: stm32f1xx_hal::gpio::gpiod::PD6<Input<Floating>>
 ) -> ! {
-    #[cfg(debug_assertions)]
-    let _ = hprintln!("Init flasher");
+    // #[cfg(debug_assertions)]
+    // let _ = hprintln!("Init flasher");
 
     let mut usb_en = pd6.into_push_pull_output(crl);
+    let mut usb_dp = pa12.into_push_pull_output(crh);
+
+    usb_en.set_high();
+    asm::delay(72_000_000 / 10);
+
     usb_en.set_low();
 
-    let mut usb_dp = pa12.into_push_pull_output(crh);
     usb_dp.set_low();
     asm::delay(72_000_000 / 100);
 
@@ -171,7 +175,9 @@ fn go_bootloader(
         // asm::wfi();
         let usb_dev = unsafe { USB_DEVICE.as_mut().unwrap() };
         let usb_hid = unsafe { USB_HID.as_mut().unwrap() };
-        if !usb_dev.poll(&mut [usb_hid]) {
+        
+        let poll_result = usb_dev.poll(&mut [usb_hid]);
+        if !poll_result {
             continue;
         }
         let mut buf = [0u8; 64];
@@ -194,7 +200,7 @@ fn go_bootloader(
     // flash.take_control();
 }
 
-#[cfg(not(debug_assertions))]
+// #[cfg(not(debug_assertions))]
 #[inline(never)]
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {

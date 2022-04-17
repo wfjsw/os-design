@@ -1,10 +1,12 @@
 use core::marker::Copy;
 use core::ops::Deref;
 use cortex_m::{interrupt, peripheral::SCB, register::control};
+// use cortex_m_semihosting::hprintln;
+use crate::hprintln;
 
 use crate::{
     structs::OptionalStruct,
-    utils::{mpu::MPU, npriv::Npriv},
+    utils::{mpu::MPU, npriv::Npriv}, syscall,
 };
 
 #[derive(Copy, Clone, PartialEq)]
@@ -85,7 +87,7 @@ impl TaskScheduler {
     }
 
     pub fn init(&mut self) {
-        if self.pcbs[0].is_some {
+        if self.pcbs[0].is_some() {
             panic!("task scheduler is in an inconsistent state - pid 0 is already in use");
         }
         self.pcbs[0].is_some = true;
@@ -94,30 +96,55 @@ impl TaskScheduler {
         self.pcbs[0].value.state = ProcessState::Initialize;
         self.pcbs[0].value.priority = 0;
 
+        self.pcbs[0].value.stack_base = get_base_stack_pointer_from_pid(0);
+
+        unsafe {
+            // let _ = hprintln!("[Task Scheduler] Init: Duplicate PSP to {:#x}", self.pcbs[0].value.stack_base);
+            // core::arch::asm!("
+            //     MSR PSP, {SP}
+            // ", SP = in(reg) self.pcbs[0].value.stack_base);
+
+            // let _ = hprintln!("[Task Scheduler] Init: Set SPsel to PSP");
+            // let mut ctrl = control::read();
+            // ctrl.set_spsel(control::Spsel::Psp);
+            // control::write(ctrl);
+
+            Npriv::set_unprivileged();
+        }
+
+       
+
+        let _ = hprintln!("[Task Scheduler] Init: Set PendSV");
         // Trigger context switch
-        SCB::set_pendsv();
+        // SCB::set_pendsv();
+        syscall!(1, 0, 0, 0);
+
+        // let _ = hprintln!("[Task Scheduler] Init: Waiting for interruption");
+
+        // cortex_m::asm::wfi();
     }
 
-    pub unsafe fn init_handler(&mut self, state: SavedState, stack_base: u32) {
+    pub unsafe fn init_handler(&mut self, state: SavedState) {
         // intended to call in handler mode
 
         self.is_activated = true;
         self.pcbs[0].is_some = true;
-        let this_pcb = &mut self.pcbs[0].value;
+        let this_pcb = self.pcbs[0].unwrap();
         this_pcb.state = ProcessState::Running;
         this_pcb.running_state = state;
-        this_pcb.stack_base = stack_base;
+        // this_pcb.stack_base = stack_base;
+        this_pcb.running_state.psp = this_pcb.stack_base;
         self.current_process = 0;
 
         // init MPU and prepare to drop into thread mode
-        Npriv::set_unprivileged();
+        // Npriv::set_unprivileged();
         // MPU::arm();
     }
 
     pub fn create(&mut self, ppid: usize, entry_point: u32) -> Option<&ProcessControlBlock> {
         let mut i = 1;
         while i < 12 {
-            if self.pcbs[i].is_some {
+            if self.pcbs[i].is_some() {
                 i += 1;
             } else {
                 self.pcbs[i].is_some = true;
@@ -126,6 +153,8 @@ impl TaskScheduler {
                 self.pcbs[i].value.state = ProcessState::Initialize;
                 self.pcbs[i].value.stack_base = get_base_stack_pointer_from_pid(i);
                 self.pcbs[i].value.entry_point = entry_point;
+
+                let _ = hprintln!("[Task Scheduler] Process {} created, ppid {}", i, ppid);
 
                 return Some(&self.pcbs[i].value);
             }
@@ -137,7 +166,7 @@ impl TaskScheduler {
     pub fn next_ready(&mut self) -> &mut ProcessControlBlock {
         let mut i = self.current_process;
         while i < 12 {
-            if self.pcbs[i].is_some && self.pcbs[i].value.state == ProcessState::Ready {
+            if self.pcbs[i].is_some() && self.pcbs[i].value.state == ProcessState::Ready {
                 self.current_process = i;
                 break;
             }
