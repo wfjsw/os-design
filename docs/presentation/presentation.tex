@@ -1,0 +1,149 @@
+\documentclass[aspectratio=169]{beamer}
+
+\usepackage{xeCJK}
+\usepackage{parskip}
+\usepackage[style=ieee]{biblatex}
+
+\def\pgfsysdriver{pgfsys -dvipdfmx.def}
+\usepackage{tikz}
+
+\addbibresource{tock.bib}
+
+\setCJKsansfont{DengXian}
+\setlength{\parindent}{2em}
+
+\setbeamerfont{title}{family=\fontfamily{DengXian Light}\selectfont}
+\setbeamerfont{frametitle}{family=\fontfamily{DengXian Light}\selectfont}
+
+\setbeamertemplate{bibliography item}{\insertbiblabel}
+
+\AtBeginBibliography{\footnotesize}
+
+\tikzset{
+    box/.style ={
+        rectangle,
+        rounded corners =5pt, 
+        minimum width =50pt,
+        minimum height =20pt, 
+        inner sep=5pt,
+        draw=blue 
+    }
+}
+
+\title{Wheel::new(): An Operating System for STM32 in Rust Embedded (ChocOS)}
+\author{Jianshu Wang, Zhu Zou}
+\date{2022-04-17}
+
+\begin{document}
+
+\maketitle
+
+\begin{frame}
+    \frametitle{简介}
+    ChocOS 是为 STM32 处理器设计的一款轻量级操作系统。
+    \par
+    该项目参考了目前市场对于客制化硬件的需求，以键盘为载体，计划实现一个可安装小应用 (Applet) 
+    以增强键盘功能与可玩性的操作系统。
+    \par
+    目前市面上有许多概念相似的硬软件项目，例如：
+    \begin{itemize}
+        \item Ledger - 可安装增强功能的 Bitcoin 钱包
+        \item QMK - 客制化通用键盘固件
+        \item 智能手机操作系统 (Android, iOS)
+    \end{itemize}
+\end{frame}
+
+\begin{frame}
+    \frametitle{国内外研究现状}
+
+    传统的 ARM 处理器实时操作系统一般采用 C/C++ 辅以部分 ARM 汇编编写，实现部分 POSIX 标准。
+    较为著名的操作系统有 FreeRTOS、ucOS 与 ChibiOS。
+    \par
+    Rust 是一种新兴语言，较 C 语言有更轻的历史包袱与更严格的内存管理策略。作为一个系统级编程语言，
+    通过削减其标准库提供的功能，Rust 有能力在功能有限的嵌入式设备中运行，并可用于编写操作系统直接
+    控制硬件外设。目前，Rust Embedded 已经发展成为一个相对成熟的社区。
+    \par
+    stm32-rs 组织为 Rust 设计了许多适用于 STM32 处理器的 HAL 库，为本项目开发操作系统提供了许多便利。
+
+\end{frame}
+
+\begin{frame}
+    \frametitle{国内外研究现状}
+
+    目前，Rust 嵌入式社区以提供 Cortex-M 处理器运行时库为主。此类库为基于 Rust 编写的嵌入式应用程序提供
+    初始化、中断捕获与外设操纵等基础功能。
+    \par
+    现阶段通过 Rust 编写，为 ARM 处理器设计的其他实时操作系统有 Tock\textsuperscript{\cite{levy17multiprogramming}} 与 bkernel。Tock 仍处于活跃开发状态，
+    而 bkernel 疑似已停止开发三年有余。
+
+    \par
+
+    \vfill
+    \noindent\rule{2cm}{0.4pt}
+    \printbibliography
+
+\end{frame}
+
+\begin{frame}
+    \frametitle{项目结构}
+    
+    该项目由以下构件组成：
+
+    \begin{itemize}
+        \item 引导程序
+        \item 操作系统内核
+        \begin{itemize}
+            \item 系统调用处理器
+            \item 多任务调度器
+            \item HID 报告驱动程序
+            \item USART 日志打印实用程序
+        \end{itemize}
+        \item 演示用应用程序
+    \end{itemize}
+
+    其中，演示用应用程序为 C 语言编写，其他构件为 Rust 语言编写。
+\end{frame}
+
+\begin{frame}
+    \frametitle{引导程序流程}
+
+    引导程序在处理器复位后立刻执行，其主要用途为检查特定的按键序列或内存标记，以确定是否引导进入
+    刷机模式。（尚4未完0成具体刷机部分）
+    
+    \vspace{1em}
+
+    \begin{tikzpicture}
+        \node[box] (RESET) at(0,2) {RESET};
+        \node[box] (CHECKBTN) at(3,2) {检查按键};
+        \node[box] (CHECKMEM) at(6,2) {检查内存};
+        \node[box] (BOOT) at(9,2) {正常引导};
+        \node[box] (FLASH) at(9,0) {刷机模式};
+        \draw[->] (RESET)--(CHECKBTN);
+        \draw[->] (CHECKBTN)--(CHECKMEM);
+        \draw[->] (CHECKMEM)--(BOOT) ;
+        \draw[->] (CHECKBTN)--(FLASH);
+        \draw[->] (CHECKMEM)--(FLASH);
+    \end{tikzpicture}
+\end{frame}
+
+\begin{frame}
+    \frametitle{内核初始化}
+
+    引导程序将处理器控制权交由内核进行，并且修改系统控制模块(System Control Block, SCB)内的向量表偏移量寄存器(Vector Table Offset Register, VTOR)，
+    使得处理器产生中断时从操作系统内核提供的中断向量表中检索中断处理程序地址。
+    \par
+    内核获得控制权后开始初始化系统状态。依序执行以下操作：
+    \begin{itemize}
+        \item 初始化系统与外设总线时钟
+        \item 初始化系统定时器 SysTick 外设 (用于激励进程调度)
+        \item 初始化 USART 串口日志输出工具
+        \item 初始化 USB HID 驱动程序，并向操作系统注册 USB 设备
+        \item 创建并初始化进程调度器
+    \end{itemize}
+\end{frame}
+
+\begin{frame}
+    
+\end{frame}
+
+\end{document}

@@ -18,6 +18,10 @@ void print(const char * str) {
     syscall(4, (int)str, 0, 0);
 }
 
+void printu32(unsigned int num) {
+    syscall(7, num, 0, 0);
+}
+
 void yield() {
     syscall(1, 0, 0, 0);
 }

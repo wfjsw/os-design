@@ -86,7 +86,7 @@ impl TaskScheduler {
         }
     }
 
-    pub fn init(&mut self) {
+    pub fn init(&mut self) -> ! {
         if self.pcbs[0].is_some() {
             panic!("task scheduler is in an inconsistent state - pid 0 is already in use");
         }
@@ -98,18 +98,27 @@ impl TaskScheduler {
 
         self.pcbs[0].value.stack_base = get_base_stack_pointer_from_pid(0);
 
+        // get address of sub_main
+        self.pcbs[0].value.entry_point = crate::sub_main as *const u32 as u32;
+
         unsafe {
-            // let _ = hprintln!("[Task Scheduler] Init: Duplicate PSP to {:#x}", self.pcbs[0].value.stack_base);
-            // core::arch::asm!("
-            //     MSR PSP, {SP}
-            // ", SP = in(reg) self.pcbs[0].value.stack_base);
+            let _ = hprintln!("[Task Scheduler] Init: Duplicate PSP to {:#x}", self.pcbs[0].value.stack_base);
+            core::arch::asm!("
+                MSR PSP, {SP}
+                MRS R0, CONTROL 
+                ORRS R0, R0, #0x2 
+                MSR CONTROL, R0
+                ISB
+            ", SP = in(reg) self.pcbs[0].value.stack_base,
+            out("r0") _);
 
             // let _ = hprintln!("[Task Scheduler] Init: Set SPsel to PSP");
             // let mut ctrl = control::read();
             // ctrl.set_spsel(control::Spsel::Psp);
             // control::write(ctrl);
 
-            Npriv::set_unprivileged();
+            // Npriv::set_unprivileged();
+
         }
 
        
@@ -119,12 +128,14 @@ impl TaskScheduler {
         // SCB::set_pendsv();
         syscall!(1, 0, 0, 0);
 
+        loop {}
+
         // let _ = hprintln!("[Task Scheduler] Init: Waiting for interruption");
 
         // cortex_m::asm::wfi();
     }
 
-    pub unsafe fn init_handler(&mut self, state: SavedState) {
+    pub unsafe fn init_handler(&mut self, state: SavedState) -> u32 {
         // intended to call in handler mode
 
         self.is_activated = true;
@@ -136,6 +147,7 @@ impl TaskScheduler {
         this_pcb.running_state.psp = this_pcb.stack_base;
         self.current_process = 0;
 
+        this_pcb.entry_point
         // init MPU and prepare to drop into thread mode
         // Npriv::set_unprivileged();
         // MPU::arm();
@@ -241,5 +253,5 @@ impl TaskScheduler {
 // OS occupies 0x2000E000 - 0x2000F500
 // Each process occupy 0xC00 (3072 bytes) of stack
 fn get_base_stack_pointer_from_pid(pid: usize) -> u32 {
-    0x2000E000 - (pid as u32) * 0xC00
+    0x2000D000 - (pid as u32) * 0x1000
 }

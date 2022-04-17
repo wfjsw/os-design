@@ -1,3 +1,4 @@
+use core::ops::Add;
 use core::{arch::asm, ptr::read_volatile};
 use stm32f1xx_hal::{device};
 use cortex_m::{peripheral::SCB, asm::dsb};
@@ -109,6 +110,11 @@ pub unsafe extern "C" fn svc_handler(caller_stack_addr: * const u32, exc_stack_a
             SCB::set_pendsv();
             dsb();
         }
+        7 => {
+            // print an integer
+            let num = arg1 as u32;
+            let _ = hprint!("{}", num);
+        },
         _ => {
             panic!("unknown syscall: {}", syscall_id);
         }
@@ -123,28 +129,19 @@ pub unsafe extern "C" fn svc_handler(caller_stack_addr: * const u32, exc_stack_a
 pub unsafe extern "C" fn PendSV() {
     asm!("
         PUSH {{LR}}
-        TST LR, #4
-        ITE EQ
-        MRSEQ R0, MSP
-        MRSNE R0, PSP
+        MRS R0, PSP
         STMDB R0!, {{R4-R11}}
         MOV R1, SP
         MOV R2, LR
         MOV R3, R7
         BL {handler}
-        POP {{LR}}
-        TST LR, #4
-        ITE EQ
-        MRSEQ R0, MSP
-        MRSNE R0, PSP
-        SUB R0, #32
         LDMIA R0!, {{R4-R11}}
-        BX LR
+        MSR PSP, R0
+        POP {{PC}}
     ", handler = sym pendsv_handler, options(noreturn));
-    // Note that LDMFD might not be executed if a context switch occurs.
 }
 
-pub unsafe extern "C" fn pendsv_handler(caller_stack_addr: * const u32, exc_stack_addr: * const u32, exc_return: * const u32, stack_base: * const u32) {
+pub unsafe extern "C" fn pendsv_handler(caller_stack_addr: * const u32, exc_stack_addr: * const u32, exc_return: * const u32, stack_base: * const u32) -> u32 {
 
     let _ = hprintln!("[Context Switch] PendSV - PSP: {:#x} SP: {:#x} LR: {:#x} R7: {:#x}", caller_stack_addr as u32, exc_stack_addr as u32, exc_return as u32, stack_base as u32);
 
@@ -153,7 +150,7 @@ pub unsafe extern "C" fn pendsv_handler(caller_stack_addr: * const u32, exc_stac
     if TASK_SCHEDULER.is_none() {
         #[cfg(debug_assertions)]
         let _ = hprintln!("Task scheduler is not initialized");
-        return
+        loop {}
     }
 
     // let _ = usb_hid::send_msg(7);
@@ -169,48 +166,46 @@ pub unsafe extern "C" fn pendsv_handler(caller_stack_addr: * const u32, exc_stac
     if !task_scheduler.is_activated {
         let _ = hprintln!("[Context Switch] PendSV - Init Root Process");
         // need to initiate the root task
-        task_scheduler.init_handler(saved_state); 
-
+        let ent = task_scheduler.init_handler(saved_state); 
+        // R4 R5 R6 R7 R8 R9 R10 R11 R1 R2 R3 R4 R12 LR PC xPSR
+        let _ = hprintln!("[Context Switch] PendSV - Rewrite PC to {:#x} at {:#x}", ent, caller_stack_addr.add(14 * 4) as u32);
+        core::ptr::write_volatile(caller_stack_addr.add(14) as *mut u32, ent);
+        return caller_stack_addr as u32;
     } else {
         let new_process_block = task_scheduler.switch(saved_state);
         if new_process_block.state == ProcessState::Initialize {
             let _ = hprintln!("[Context Switch] PendSV - Initialize process {}", new_process_block.pid);
+            let mut stk = new_process_block.stack_base;
             // require initialization
             asm!("
-                MOV R5, {SP}
-                STMDB R5!, {{{ZERO}}}
-                STMDB R5!, {{{PC}}}
-                STMDB R5!, {{{ZERO}}}
-                STMDB R5!, {{{ZERO}}}
-                STMDB R5!, {{{ZERO}}}
-                STMDB R5!, {{{ZERO}}}
-                STMDB R5!, {{{ZERO}}}
-                STMDB R5!, {{{ZERO}}}
-                MSR PSP, R5
-                MOV PC, {EXC_RETURN}
+                MOV {SP}, {SP}
+                STMDB {SP}!, {{{XPSR}}}
+                STMDB {SP}!, {{{PC}}}
+                STMDB {SP}!, {{{ZERO}}}
+                STMDB {SP}!, {{{ZERO}}}
+                STMDB {SP}!, {{{ZERO}}}
+                STMDB {SP}!, {{{ZERO}}}
+                STMDB {SP}!, {{{ZERO}}}
+                STMDB {SP}!, {{{ZERO}}}
+                STMDB {SP}!, {{{ZERO}}}
+                STMDB {SP}!, {{{ZERO}}}
+                STMDB {SP}!, {{{ZERO}}}
+                STMDB {SP}!, {{{ZERO}}}
+                STMDB {SP}!, {{{ZERO}}}
+                STMDB {SP}!, {{{ZERO}}}
+                STMDB {SP}!, {{{ZERO}}}
+                STMDB {SP}!, {{{ZERO}}}
             ",
                 ZERO = in(reg) 0,
                 PC = in(reg) new_process_block.entry_point,
-                SP = in(reg) new_process_block.stack_base,
-                EXC_RETURN = in(reg) 0xFFFF_FFFDu32,
-                in("r5") 0,
-                options(noreturn)
+                SP = inout(reg) stk,
+                XPSR = in(reg) 0x0100_0000 // T = 1 (Thumb)
             );
+            return stk;
         } else {
             let _ = hprintln!("[Context Switch] PendSV - Serializing and switching to {}", new_process_block.pid);
             let load_state = new_process_block.running_state;
-            asm!("
-                MOV R0, {psp}
-                LDMIA R0!, {{R4-R11}}
-                MSR PSP, R0
-                MOV PC, {exc_return}
-            ", 
-                // rsp = in(reg) load_state.rsp,
-                psp = in(reg) load_state.psp,
-                exc_return = in(reg) load_state.exc_return,
-                in("r0") 0,
-                options(noreturn)
-            );
+            return load_state.psp;
         }
     }
 }

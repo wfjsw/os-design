@@ -54,7 +54,7 @@ fn main() -> ! {
         .adcclk(14.mhz())
         .freeze(&mut flash.acr);
 
-    let mainFreq = clocks.sysclk().0;
+    let main_freq = clocks.sysclk().0;
 
     assert!(clocks.usbclk_valid());
 
@@ -99,13 +99,13 @@ fn main() -> ! {
     // #[cfg(debug_assertions)]
     let _ = hprintln!("[ChocOS] Init: OS init");
 
-    usb_hid::init(mainFreq, p.USB, gpiod.pd6, &mut gpiod.crl, gpioa.pa11, gpioa.pa12, &mut gpioa.crh);
+    usb_hid::init(main_freq, p.USB, gpiod.pd6, &mut gpiod.crl, gpioa.pa11, gpioa.pa12, &mut gpioa.crh);
 
     // let _ = usb_hid::send_msg(0);
 
     let _ = hprintln!("[ChocOS] Init: Waiting for USB to ready");
 
-    cortex_m::asm::delay(mainFreq);
+    cortex_m::asm::delay(main_freq);
 
     // let _ = usb_hid::send_msg(1);
     let _ = hprintln!("[ChocOS] Init: Creating Task Scheduler instance");
@@ -120,6 +120,9 @@ fn main() -> ! {
         // Init task scheduler
         TASK_SCHEDULER.as_mut().unwrap().init();
     }
+}
+
+fn sub_main() -> ! {
 
     // let task_scheduler = unsafe { TASK_SCHEDULER.as_mut().unwrap() };
 
@@ -127,7 +130,7 @@ fn main() -> ! {
 
     // task_scheduler.create(0, 0x080200E0);
 
-    syscall!(6, 0x08030082, 0, 0);
+    syscall!(6, 0x080300A2, 0, 0);
 
     unsafe {TASK_SCHEDULER_INIT_READY = true};
 
