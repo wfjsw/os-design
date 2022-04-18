@@ -10,18 +10,24 @@
 
 \addbibresource{tock.bib}
 
+\xeCJKsetup{AutoFakeBold=true, AutoFakeSlant = true}
 \setCJKsansfont{DengXian}
+\setCJKmainfont{SimSun}
+\setCJKmonofont{Consolas}
+\setmainfont{Times New Roman}
+\setsansfont{Calibri}
+
 \setlength{\parindent}{2em}
 
-\setbeamerfont{title}{series=\mdseries,family=\sfdefault}
-\setbeamerfont{frametitle}{series=\mdseries,family=\sfdefault}
+\setbeamerfont{title}{family=\sffamily}
+\setbeamerfont{frametitle}{family=\sffamily}
 
 \setbeamertemplate{bibliography item}{\insertbiblabel}
 \setbeamertemplate{caption}[numbered]
 
-\DeclareCaptionFont{song}{\small\fontseries{m}\fontfamily{SimSun}\selectfont}
+\DeclareCaptionFont{song}{\small\rmfamily}
 
-\AtBeginBibliography{\footnotesize}
+\AtBeginBibliography{\footnotesize\rmfamily}
 
 \tikzset{
     box/.style ={
@@ -75,10 +81,10 @@
     \frametitle{国内外研究现状}
 
     目前，Rust 嵌入式社区以提供 Cortex-M 处理器运行时库为主。此类库为基于 Rust 编写的嵌入式应用程序提供
-    初始化、中断捕获与外设操纵等基础功能。
+    初始化、中断捕获与外设操纵等基础功能。较为完善的运行时库如 cortex-m-rt 与 cortex-m-rtic。
     \par
-    现阶段通过 Rust 编写，为 ARM 处理器设计的其他实时操作系统有 Tock\textsuperscript{\cite{levy17multiprogramming}} 与 bkernel。Tock 仍处于活跃开发状态，
-    而 bkernel 疑似已停止开发三年有余。
+    现阶段通过 Rust 编写，为 ARM 处理器设计的其他实时操作系统有 Tock\textsuperscript{\cite{levy17multiprogramming}} 与 bkernel。
+    Tock 仍处于活跃开发中，而 bkernel 疑似已停止开发三年有余。
 
     \par
 
@@ -190,10 +196,10 @@
     当前采用的系统调用 ABI：
 
     \begin{center}
-        \begin{tabular}{ |c|c|c|c| }
+        \begin{tabular}{ |c|c|c|c|c| }
             \hline
-            R0 & R1 & R2 & R3 \\ \hline
-            ID/返回值 & 参数 1 & 参数 2 & 参数 3 \\
+            \textbf{寄存器} & R0 & R1 & R2 & R3 \\ \hline
+            \textbf{用途} & ID/返回值 & 参数 1 & 参数 2 & 参数 3 \\
             \hline
         \end{tabular}
     \end{center}
@@ -216,7 +222,7 @@
 \begin{frame}
     \frametitle{系统调用}
 
-    本项目实现的系统调用列表：
+    本项目目前已实现的系统调用列表：
 
     \begin{center}
         \begin{tabular}{ |c|c| }
@@ -318,7 +324,12 @@
 
     \frametitle{进程调度 - 中断流程图示}
 
-
+    \begin{figure}
+        \centering
+            \captionsetup{font=song}
+            \includegraphics{3-s2.0-B9780124080829000105-f10-03-9780124080829.jpg}
+            \caption{一次时间片轮转的完整流程}
+    \end{figure}
 
 \end{frame}
 
@@ -326,6 +337,34 @@
 
     \frametitle{进程调度 - 栈内存图示}
 
+    \begin{figure}
+        \centering
+            \captionsetup{font=song}
+            \includegraphics[height=0.60\paperheight, keepaspectratio]{3-s2.0-B9780124080829000105-f10-01-9780124080829.jpg}
+            \caption{多进程内存布局示意图}
+    \end{figure}
+
+\end{frame}
+
+\begin{frame}
+
+    \frametitle{进程调度 - 内存周转图示}
+
+    \begin{figure}
+        \centering
+            \captionsetup{font=song}
+            \includegraphics[width=0.80\textwidth, keepaspectratio]{3-s2.0-B9780124080829000105-f10-10-9780124080829.jpg}
+            \caption{进程调度过程中内存周转示意图}
+    \end{figure}
+
+\end{frame}
+
+\begin{frame}
+
+    \frametitle{鸣谢}
+
+    本项目开发过程中使用了许多社区提供的
+    
 \end{frame}
 
 \end{document}
