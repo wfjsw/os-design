@@ -143,6 +143,156 @@
 \end{frame}
 
 \begin{frame}
+
+    \frametitle{系统调用}
+
+    系统调用通过处理器软中断 11 号 (SuperVisor Call, SVCall) 实现。通过 SVC 指令触发中断，处理器进入 
+    Handler 模式并解除所有特权限制，通过中断向量表检索处理程序并跳转执行。
+
+    \par
+
+    系统调用处理流程：
+    
+    \begin{itemize}
+        \item ASM: 提取异常栈地址
+        \item Rust: 提取系统调用编号 (R0) 与其三个参数 (R1-R3)
+        \item Rust: 根据系统调用编号执行对应操作
+        \item ASM: 退出异常处理环境
+    \end{itemize}
+
+\end{frame}
+
+\begin{frame}
+
+    \frametitle{系统调用}
+
+    \par
+
+    本系统的 SVCall 中断处理程序首先由汇编指令进行参数预处理，并跳转到由 Rust 编写的主体程序完成其余操作。
+
+    \par
+
+    在触发 SVC 中断时，处理器自动将 R0-R4、R12、LR、PC、xPSR 寄存器压栈。预处理时，汇编处理程序将栈顶地址从
+    PSP 寄存器中检出，存放在 R0 寄存器中以备后续执行。由于主体程序使用 C ABI 声明，R0 存放的地址便可通过
+    该函数的第一个参数获得。由此完成地址从 ASM 世界到 Rust 世界的转移。
+
+    \par
+
+    由于寄存器 R7 被 LLVM 内部占用，而 R7 在 Linux 系统调用 ABI 中被用于存放系统调用编号，因此在本项目中
+    无法实现传统的系统调用 ABI。
+
+    \par
+
+    当前采用的系统调用 ABI：
+
+    \begin{center}
+        \begin{tabular}{ |c|c|c|c| }
+            \hline
+            R0 & R1 & R2 & R3 \\ \hline
+            ID/返回值 & 参数 1 & 参数 2 & 参数 3 \\
+            \hline
+        \end{tabular}
+    \end{center}
+    
+\end{frame}
+
+\begin{frame}
+    \frametitle{系统调用}
+
+    本项目实现的系统调用列表：
+
+    \begin{center}
+        \begin{tabular}{ |c|c| }
+            \hline
+            \textbf{系统调用 ID} & \textbf{功能} \\ \hline
+            0 & 保留 \\
+            1 & 交出控制权并立即执行调度 \\
+            3 & Rust 格式字符串打印 \\ 
+            4 & C 格式字符串打印 \\
+            5 & 进程退出 \\
+            6 & 进程创建 \\
+            7 & 打印整型数据 \\ \hline
+        \end{tabular}
+    \end{center}
+    
+\end{frame}
+
+\begin{frame}
+
+    \frametitle{进程调度}
+
+    本项目通过一个定长数组存放进程控制块，最大可容纳进程数为 11 个，采用时间片轮转调度算法执行调度。
+
+    \par
+
+    进程调度器存放如下状态：
+
+    \begin{center}
+        \begin{tabular}{ |c|c|c| }
+            \hline
+            \textbf{名称} & \textbf{类型} & \textbf{说明} \\ \hline
+            is\_activated & bool & 是否完成初始化 \\ 
+            current\_process & usize & 当前运行 PID \\ 
+            pending\_process & usize & 待决 PID \\ 
+            pcbs & PCB[12] & 进程控制块数组 \\ \hline
+        \end{tabular}
+    \end{center}
+    
+\end{frame}
+
+\begin{frame}
+    \frametitle{进程控制块}
+
+    进程控制块存放以下信息：
+
+    \begin{center}
+        \begin{tabular}{ |c|c|c| }
+            \hline
+            \textbf{名称} & \textbf{类型} & \textbf{说明} \\ \hline
+            is\_some & bool & 是否存放有效信息 \\ 
+            pid & usize & 进程 ID \\ 
+            ppid & usize & 父进程 ID \\
+            stack\_base & u32 & 堆栈基地址 \\
+            entry\_point & u32 & 进程入口点 \\
+            priority & u32 & 进程优先级 \\
+            state & ProcessState & 进程状态 \\ 
+            running\_state & SavedState & 进程运行态(栈顶地址) \\ \hline
+        \end{tabular}
+    \end{center}
+\end{frame}
+
+
+
+\begin{frame}
+
+    \frametitle{进程调度 - 上下文切换}
+
+    按照内核初始化时对 SysTick 的配置，该外设每隔 50ms 将产生一个 SysTick 中断。中断处理器
+    检查进程调度器状态，如调度器已完成初始化，则待决一个 PendSV 异常。该异常优先级最低，在完成
+    其他所有中断后择机执行。
+
+    \par
+
+    PendSV 异常处理器负责保存当前运行进程状态，从调度器中检出下一个应当运行的进程，恢复该进程的状态并
+    将控制权交由目标程序。
+
+    \vspace{1em}
+
+    \begin{tikzpicture}
+        \node[box] (EXC) at(0,4) {PendSV 异常};
+        \node[box] (SAVEEXTRA) at(3,4) {保存 R4-R11};
+        \node[box] (CHECKINIT) at(6,4) {检查初始化状态};
+        \node[box] (CHECKPEND) at(6,2) {检查待决进程}
+        \node[box] (INIT) at(9,4) {初始化调度器};
+        \node[box] (INITPEND) at(9,2) {初始化待决进程};
+        \node[box] (SWITCH) at(9,0) {切换下一进程};
+        \draw[->] (EXC)--(SAVEEXTRA);
+        \draw[->] (SAVEEXTRA)--(CHECKINIT);
+        \draw[->] (CHECKINIT)--(INIT);
+        \draw[->] (CHECKINIT)--(CHECKPEND);
+        \draw[->] (CHECKPEND)--(INITPEND);
+        \draw[->] (CHECKPEND)--(SWITCH);
+    \end{tikzpicture}
     
 \end{frame}
 

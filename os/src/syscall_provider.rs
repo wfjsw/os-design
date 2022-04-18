@@ -178,7 +178,6 @@ pub unsafe extern "C" fn pendsv_handler(caller_stack_addr: * const u32, exc_stac
             let mut stk = new_process_block.stack_base;
             // require initialization
             asm!("
-                MOV {SP}, {SP}
                 STMDB {SP}!, {{{XPSR}}}
                 STMDB {SP}!, {{{PC}}}
                 STMDB {SP}!, {{{ZERO}}}
