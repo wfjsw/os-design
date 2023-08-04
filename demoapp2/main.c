@@ -9,6 +9,9 @@ void _start() {
 }
 
 int main() {
+
+    create(0x080300C2);
+
     int counter = 0;
     while (1)
     {

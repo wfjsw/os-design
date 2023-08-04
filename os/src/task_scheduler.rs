@@ -138,7 +138,6 @@ impl TaskScheduler {
     pub unsafe fn init_handler(&mut self, state: SavedState) -> u32 {
         // intended to call in handler mode
 
-        self.is_activated = true;
         self.pcbs[0].is_some = true;
         let this_pcb = self.pcbs[0].unwrap();
         this_pcb.state = ProcessState::Running;
@@ -146,6 +145,8 @@ impl TaskScheduler {
         // this_pcb.stack_base = stack_base;
         this_pcb.running_state.psp = this_pcb.stack_base;
         self.current_process = 0;
+        self.is_activated = true;
+
 
         this_pcb.entry_point
         // init MPU and prepare to drop into thread mode

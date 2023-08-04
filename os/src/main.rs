@@ -34,7 +34,6 @@ use task_scheduler::TaskScheduler;
 
 static mut MPU: Option<cortex_m::peripheral::MPU> = None;
 static mut TASK_SCHEDULER: Option<TaskScheduler> = None;
-static mut TASK_SCHEDULER_INIT_READY: bool = false;
 
 #[entry]
 fn main() -> ! {
@@ -76,11 +75,11 @@ fn main() -> ! {
 
     // setup timer
     let syst = &mut cp.SYST;
-    syst.set_clock_source(SystClkSource::External);
-    syst.set_reload(clocks.sysclk().0 / 20); // 50ms
+    syst.set_clock_source(SystClkSource::Core);
+    syst.set_reload(0x00efffff); // ?
     syst.clear_current();
     syst.enable_counter();
-    syst.enable_interrupt();
+    // syst.enable_interrupt();
 
     // setup usb
     let mut gpioa = p.GPIOA.split();
@@ -130,9 +129,7 @@ fn sub_main() -> ! {
 
     // task_scheduler.create(0, 0x080200E0);
 
-    syscall!(6, 0x080300A2, 0, 0);
-
-    unsafe {TASK_SCHEDULER_INIT_READY = true};
+    syscall!(6, 0x080300C2, 0, 0);
 
     // let _ = usb_hid::send_msg(2);
 
@@ -154,7 +151,7 @@ unsafe fn reset_vtor(scb: &mut cortex_m::peripheral::SCB) {
 unsafe fn SysTick() {
     // let _ = usb_hid::send_msg(4);
     let task_scheduler_opt = TASK_SCHEDULER.as_ref();
-    if task_scheduler_opt.is_some() && TASK_SCHEDULER_INIT_READY {
+    if task_scheduler_opt.is_some() {
         let task_scheduler = task_scheduler_opt.unwrap();
         if task_scheduler.is_activated {
             let _ = hprintln!("[Exception] SysTick: Set PendSV");

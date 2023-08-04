@@ -26,6 +26,10 @@ void yield() {
     syscall(1, 0, 0, 0);
 }
 
+void create(unsigned int addr) {
+    syscall(6, addr, 0, 0);
+}
+
 void _exit(int return_code) {
     syscall(5, return_code, 0, 0);
     while(1)

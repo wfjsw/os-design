@@ -1,21 +1,22 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169]{ctexbeamer}
 
-\usepackage{xeCJK}
+% \usepackage{xeCJK}
 \usepackage{parskip}
 \usepackage[style=ieee]{biblatex}
 \usepackage{caption}
+\usepackage{siunitx}
 
 \def\pgfsysdriver{pgfsys -dvipdfmx.def}
 \usepackage{tikz}
 
 \addbibresource{tock.bib}
 
-\xeCJKsetup{AutoFakeBold=true, AutoFakeSlant = true}
+\xeCJKsetup{AutoFakeBold = true, AutoFakeSlant = true}
 \setCJKsansfont{DengXian}
 \setCJKmainfont{SimSun}
-\setCJKmonofont{Consolas}
 \setmainfont{Times New Roman}
 \setsansfont{Calibri}
+\setmonofont{Consolas}
 
 \setlength{\parindent}{2em}
 
@@ -111,26 +112,27 @@
         \item 演示用应用程序
     \end{itemize}
 
-    其中，演示用应用程序为 C 语言编写，其他构件为 Rust 语言编写。
+    其中，演示用应用程序为 C 语言编写，其他构件为 Rust (no-std) 语言编写。使用 OpenOCD
+    驱动仿真器链接，Keli \(\mu\)Vision 5 完成汇编联调。
 \end{frame}
 
 \begin{frame}
     \frametitle{引导程序流程}
 
     引导程序在处理器复位后立刻执行，其主要用途为检查特定的按键序列或内存标记，以确定是否引导进入
-    刷机模式。（尚4未完0成具体刷机部分）
+    刷机模式。（尚未完成具体刷机部分）
     
     \vspace{1em}
 
     \begin{tikzpicture}
         \node[box] (RESET) at(0,2) {RESET};
-        \node[box] (CHECKBTN) at(3,2) {检查按键};
-        \node[box] (CHECKMEM) at(6,2) {检查内存};
+        \node[box] (CHECKMEM) at(3,2) {检查内存};
+        \node[box] (CHECKBTN) at(6,2) {检查按键};
         \node[box] (BOOT) at(9,2) {正常引导};
         \node[box] (FLASH) at(9,0) {刷机模式};
-        \draw[->] (RESET)--(CHECKBTN);
-        \draw[->] (CHECKBTN)--(CHECKMEM);
-        \draw[->] (CHECKMEM)--(BOOT) ;
+        \draw[->] (RESET)--(CHECKMEM);
+        \draw[->] (CHECKMEM)--(CHECKBTN);
+        \draw[->] (CHECKBTN)--(BOOT) ;
         \draw[->] (CHECKBTN)--(FLASH);
         \draw[->] (CHECKMEM)--(FLASH);
     \end{tikzpicture}
@@ -361,9 +363,88 @@
 
 \begin{frame}
 
+    \frametitle{系统运行演示图}
+
+    \begin{figure}
+        \centering
+            \captionsetup{font=song}
+            \includegraphics[width=0.85\textwidth, keepaspectratio]{UV4_evFpNFh2KI.png}
+            \caption{Keli \(\mu\)Vision 调试界面}
+    \end{figure}
+
+\end{frame}
+
+\begin{frame}
+
+    \frametitle{系统运行演示图}
+
+    \begin{figure}
+        \centering
+            \captionsetup{font=song}
+            \includegraphics[width=0.65\textwidth, keepaspectratio]{fireTools_iUcrMzgidq.png}
+            \caption{操作系统运行状态的日志输出}
+    \end{figure}
+
+\end{frame}
+
+\begin{frame}
+
+    \frametitle{系统运行演示图}
+
+    \begin{figure}
+        \centering
+            \captionsetup{font=song}
+            \includegraphics[width=0.5\textwidth, keepaspectratio]{mmc_zLq8n2DTF5.png}
+            \caption{注册在设备管理器中的 HID 键盘设备}
+    \end{figure}
+
+\end{frame}
+
+\begin{frame}
+
+    \frametitle{实机照片}
+
+    \begin{figure}
+        \centering
+            \captionsetup{font=song}
+            \includegraphics[width=0.5\textwidth, keepaspectratio]{6278327080001319126_121.jpg}
+            \caption{DAP 仿真器与 STM32 开发板合影}
+    \end{figure}
+
+\end{frame}
+
+\begin{frame}
+    \frametitle{改进方向}
+
+    目前，该项目距离一个完整的操作系统仍然存在许多不足之处。可以从如下方向入手改进：
+    
+    \begin{itemize}
+        \item 考虑更好的系统调度算法，比如轮转调度算法，优先级调度算法等。加入 Deadline 机制，提高系统实时性。
+        \item 简化上下文切换流程或调整时间片大小使其对应。
+        \item 添加更多外设驱动程序，丰富操作系统功能。
+        \item 添加一个堆内存分配器。
+        \item 适当进行优化以降低操作系统体积。
+    \end{itemize}
+\end{frame}
+
+\begin{frame}
+
     \frametitle{鸣谢}
 
-    本项目开发过程中使用了许多社区提供的
+    本项目开发过程中使用了许多社区提供的开源库，大大降低了开发难度，包括：
+    \begin{itemize}
+        \item rust-embedded/cortex-m: Low level access to Cortex-M processors
+        \item rust-embedded/cortex-m-rt: Minimal startup / runtime for Cortex-M microcontrollers
+        \item stm32-rs/stm32f1xx-hal: A Rust embedded-hal HAL impl for the STM32F1 family based on japarics stm32f103xx-hal
+        \item mvirkkunen/usb-device: Experimental device-side USB framework for microcontrollers in Rust.
+    \end{itemize}
+    
+    同时参考了一些在线书籍，包括：
+    \begin{itemize}
+        \item The embedonomicon (https://docs.rust-embedded.org/embedonomicon/)
+        \item The Embedded Rust Book (https://docs.rust-embedded.org/book/)
+        \item The Definitive Guide to ARM® CORTEX®-M3 and CORTEX®-M4 Processors
+    \end{itemize}
     
 \end{frame}
 
